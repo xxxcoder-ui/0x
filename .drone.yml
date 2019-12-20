@@ -9,6 +9,8 @@ platform:
 steps:
   - name: publish-sha
     image: plugins/ecr
+    node_selector:
+        drone-builds: "true"
     settings:
       repo:
         from_secret: ecr_repo
@@ -29,6 +31,8 @@ platform:
 steps:
   - name: publish  
     image: plugins/ecr
+    node_selector:
+        drone-builds: "true"
     settings:
       repo:
         from_secret: ecr_repo
