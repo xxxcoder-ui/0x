@@ -16,6 +16,7 @@ import {
     GWEI_DECIMALS,
     NUMBER_OF_BLOCKS_UNTIL_CONFIRMED,
     ONE_SECOND_MS,
+    TX_HASH_RESPONSE_WAIT_TIME_MS,
     TX_WATCHER_POLLING_INTERVAL_MS,
     TX_WATCHER_UPDATE_METRICS_INTERVAL_MS,
     UNSTICKING_TRANSACTION_GAS_MULTIPLIER,
@@ -46,6 +47,11 @@ export class TransactionWatcherSignerService {
         providerEngine.addProvider(new RPCSubprovider(rpcHost));
         providerUtils.startProviderEngine(providerEngine);
         return providerEngine;
+    }
+    private static _isUnsubmittedTxExpired(tx: TransactionEntity): boolean {
+        const now = new Date();
+        const shouldBeSubmittedBy = new Date(tx.createdAt.getTime() + TX_HASH_RESPONSE_WAIT_TIME_MS);
+        return tx.status === TransactionStates.Unsubmitted && now > shouldBeSubmittedBy;
     }
     constructor(dbConnection: Connection) {
         this._provider = TransactionWatcherSignerService._createWeb3Provider(ETHEREUM_RPC_URL);
@@ -108,10 +114,10 @@ export class TransactionWatcherSignerService {
     }
     public async syncTransactionStatusAsync(): Promise<void> {
         try {
-            await this._signAndBroadcastTransactionsAsync();
+            await this._cancelOrSignAndBroadcastTransactionsAsync();
         } catch (err) {
             logger.error({
-                message: `failed to sign and broadcast transacitons`,
+                message: `failed to sign and broadcast transactions: ${JSON.stringify(err)}`,
                 stack: err.stack,
             });
         }
@@ -245,14 +251,33 @@ export class TransactionWatcherSignerService {
         const latestBlockTimestamp = await this._web3Wrapper.getBlockTimestampAsync('latest');
         return new Date(latestBlockTimestamp * ONE_SECOND_MS);
     }
-    private async _signAndBroadcastTransactionsAsync(): Promise<void> {
+    private async _cancelOrSignAndBroadcastTransactionsAsync(): Promise<void> {
         const unsignedTransactions = await this._transactionRepository.find({
             where: [{ status: TransactionStates.Unsubmitted }],
         });
         logger.trace(`found ${unsignedTransactions.length} transactions to sign and broadcast`);
         for (const tx of unsignedTransactions) {
-            const signer = await this._getNextSignerAsync();
-            await this._signAndBroadcastMetaTxAsync(tx, signer);
+            if (TransactionWatcherSignerService._isUnsubmittedTxExpired(tx)) {
+                logger.error({
+                    message: `found a transaction in an unsubmitted state waiting longer that ${TX_HASH_RESPONSE_WAIT_TIME_MS}ms`,
+                    refHash: tx.refHash,
+                    from: tx.from,
+                });
+                tx.status = TransactionStates.Cancelled;
+                await this._transactionRepository.save(tx);
+                continue;
+            }
+            try {
+                const signer = await this._getNextSignerAsync();
+                await this._signAndBroadcastMetaTxAsync(tx, signer);
+            } catch (err) {
+                logger.error({
+                    message: `failed to sign and broadcast transaction ${JSON.stringify(err)}`,
+                    stack: err.stack,
+                    refHash: tx.refHash,
+                    from: tx.from,
+                });
+            }
         }
     }
     private _getSignerByPublicAddressOrThrow(publicAddress: string): Signer {
