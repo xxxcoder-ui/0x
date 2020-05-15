@@ -7,6 +7,7 @@ import { logger } from '../logger';
 import { createMetricsRouter } from '../routers/metrics_router';
 import { MetricsService } from '../services/metrics_service';
 import { TransactionWatcherSignerService } from '../services/transaction_watcher_signer_service';
+import { METRICS_PATH } from '../constants';
 
 if (require.main === module) {
     (async () => {
@@ -35,7 +36,7 @@ export async function runTransactionWatcherServiceAsync(connection: Connection):
         const app = express();
         const metricsService = new MetricsService();
         const metricsRouter = createMetricsRouter(metricsService);
-        app.use(metricsRouter);
+        app.use(METRICS_PATH, metricsRouter);
         const server = app.listen(defaultConfig.PROMETHEUS_PORT, () => {
             logger.info(`Metrics (HTTP) listening on port ${defaultConfig.PROMETHEUS_PORT}`);
         });
