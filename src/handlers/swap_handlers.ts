@@ -11,7 +11,7 @@ import {
     SWAP_DOCS_URL,
 } from '../constants';
 import {
-    InternalServerError,
+    ClientError, InternalServerError,
     RevertAPIError,
     ValidationError,
     ValidationErrorCodes,
@@ -145,6 +145,9 @@ export class SwapHandlers {
     public async getMarketDepthAsync(req: express.Request, res: express.Response): Promise<void> {
         const makerToken = getTokenMetadataIfExists(req.query.buyToken as string, CHAIN_ID);
         const takerToken = getTokenMetadataIfExists(req.query.sellToken as string, CHAIN_ID);
+        if (makerToken && takerToken && makerToken.symbol === takerToken.symbol) {
+            throw new ClientError(`Invalid token pair: ${takerToken.symbol}/${makerToken.symbol}`);
+        }
         const response = await this._swapService.calculateMarketDepthAsync({
             buyToken: makerToken,
             sellToken: takerToken,
