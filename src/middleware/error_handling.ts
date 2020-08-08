@@ -24,13 +24,14 @@ export function generateError(err: Error): ErrorBodyWithHTTPStatusCode {
         // populate more information for BAD_REQUEST errors
         if (isBadRequestError(err)) {
             const code = err.generalErrorCode;
+            const reason = err.reason || generalErrorCodeToReason[code];
             // populate validation error information
             if (isValidationError(err)) {
                 return {
                     statusCode,
                     errorBody: {
                         code,
-                        reason: generalErrorCodeToReason[code],
+                        reason,
                         validationErrors: err.validationErrors,
                     },
                 };
@@ -49,7 +50,7 @@ export function generateError(err: Error): ErrorBodyWithHTTPStatusCode {
                     statusCode,
                     errorBody: {
                         code,
-                        reason: generalErrorCodeToReason[code],
+                        reason,
                     },
                 };
             }

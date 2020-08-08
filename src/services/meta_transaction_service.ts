@@ -30,6 +30,7 @@ import {
     ZERO,
 } from '../constants';
 import { KeyValueEntity, TransactionEntity } from '../entities';
+import { ClientError } from '../errors';
 import { logger } from '../logger';
 import {
     CalculateMetaTransactionPriceResponse,
@@ -59,7 +60,7 @@ export class MetaTransactionService {
         return META_TXN_SUBMIT_WHITELISTED_API_KEYS.includes(apiKey);
     }
     private static _calculateProtocolFee(numOrders: number, gasPrice: BigNumber): BigNumber {
-        return new BigNumber(150000).times(gasPrice).times(numOrders);
+        return new BigNumber(700000).times(gasPrice).times(numOrders);
     }
     constructor(orderbook: Orderbook, provider: SupportedProvider, dbConnection: Connection) {
         this._provider = provider;
@@ -127,7 +128,7 @@ export class MetaTransactionService {
                 assetSwapperOpts,
             );
         } else {
-            throw new Error('sellAmount or buyAmount required');
+            throw new ClientError('sellAmount or buyAmount required');
         }
         const { gasPrice } = swapQuote;
         const { gas, protocolFeeInWeiAmount: protocolFee } = swapQuote.worstCaseQuoteInfo;
@@ -242,7 +243,7 @@ export class MetaTransactionService {
         // Verify 0x txn won't expire in next 60 seconds
         const sixtySecondsFromNow = new BigNumber(Date.now() + ONE_MINUTE_MS).dividedBy(ONE_SECOND_MS);
         if (zeroExTransaction.expirationTimeSeconds.lte(sixtySecondsFromNow)) {
-            throw new Error('zeroExTransaction expirationTimeSeconds in less than 60 seconds from now');
+            throw new ClientError(`expirationTimeSeconds in less than 60 seconds from now: ${zeroExTransaction.expirationTimeSeconds}`);
         }
 
         const [, orders] = await this._devUtils.decodeZeroExTransactionData(zeroExTransaction.data).callAsync();
@@ -252,7 +253,7 @@ export class MetaTransactionService {
         // Make sure gasPrice is not 3X the current fast EthGasStation gas price
         // tslint:disable-next-line:custom-no-magic-numbers
         if (currentFastGasPrice.lt(gasPrice) && gasPrice.minus(currentFastGasPrice).gte(currentFastGasPrice.times(3))) {
-            throw new Error('Gas price too high');
+            throw new ClientError(`Gas price too high: ${gasPrice}`);
         }
 
         const protocolFee = MetaTransactionService._calculateProtocolFee(orders.length, gasPrice);
@@ -397,7 +398,7 @@ export class MetaTransactionService {
                 .marketBuyOrdersFillOrKill(orders, buyAmount, signatures)
                 .getABIEncodedTransactionData();
         } else {
-            throw new Error('sellAmount or buyAmount required');
+            throw new ClientError('sellAmount or buyAmount required');
         }
 
         // generate the zeroExTransaction object

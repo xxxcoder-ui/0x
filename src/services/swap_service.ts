@@ -36,7 +36,7 @@ import {
     WRAP_QUOTE_GAS,
     ZERO,
 } from '../constants';
-import { InsufficientFundsError } from '../errors';
+import { ClientError, InsufficientFundsError } from '../errors';
 import { logger } from '../logger';
 import { TokenMetadatasForChains } from '../token_metadatas_for_networks';
 import {
@@ -197,7 +197,7 @@ export class SwapService {
                     : adjustedWorstCaseProtocolFee;
                 break;
             default:
-                throw new Error(`Unsupported Swap version: ${swapVersion}`);
+                throw new ClientError(`Unsupported Swap version: ${swapVersion}`);
         }
         const allowanceTarget = isETHSell ? NULL_ADDRESS : erc20AllowanceTarget;
 
@@ -250,6 +250,7 @@ export class SwapService {
                         assetDataUtils.encodeERC20AssetData(m.tokenAddresses[CHAIN_ID]),
                     );
                     const amounts = a.map(m => Web3Wrapper.toBaseUnitAmount(unitAmount, m.decimals));
+                    console.time(a.map(m => m.symbol).join(','));
                     const quotes = await this._swapQuoter.getBatchMarketBuySwapQuoteForAssetDataAsync(
                         encodedAssetData,
                         takerAssetData,
@@ -258,9 +259,11 @@ export class SwapService {
                             ...ASSET_SWAPPER_MARKET_ORDERS_V0_OPTS,
                             bridgeSlippage: 0,
                             maxFallbackSlippage: 0,
-                            numSamples: 3,
+                            numSamples: 1,
+                            runLimit: 32,
                         },
                     );
+                    console.timeEnd(a.map(m => m.symbol).join(','));
                     return quotes;
                 }),
             ),
@@ -353,7 +356,7 @@ export class SwapService {
         } = params;
         const amount = buyAmount || sellAmount;
         if (amount === undefined) {
-            throw new Error('sellAmount or buyAmount required');
+            throw new ClientError('sellAmount or buyAmount required');
         }
         const data = (isUnwrap
             ? this._wethContract.withdraw(amount)
@@ -411,7 +414,7 @@ export class SwapService {
                     revertError = RevertError.decode(e.data, false);
                 } catch (e) {
                     logger.error(`Could not decode revert error: ${e}`);
-                    throw new Error(e.message);
+                    throw new ClientError(e.message);
                 }
             } else {
                 revertError = decodeThrownErrorAsRevertError(e);
@@ -462,7 +465,7 @@ export class SwapService {
                     takerAddress = this._contractAddresses.exchangeProxyFlashWallet;
                     break;
                 default:
-                    throw new Error(`Unsupported Swap version: ${swapVersion}`);
+                    throw new ClientError(`Unsupported Swap version: ${swapVersion}`);
             }
             _rfqt = {
                 ...rfqt,
@@ -502,7 +505,7 @@ export class SwapService {
                 assetSwapperOpts,
             );
         } else {
-            throw new Error('sellAmount or buyAmount required');
+            throw new ClientError('sellAmount or buyAmount required');
         }
     }
 
@@ -528,7 +531,7 @@ export class SwapService {
                 };
                 break;
             default:
-                throw new Error(`Unsupported Swap version: ${swapVersion}`);
+                throw new ClientError(`Unsupported Swap version: ${swapVersion}`);
         }
 
         const {

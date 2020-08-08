@@ -15,6 +15,7 @@ export abstract class APIBaseError extends Error {
 export abstract class BadRequestError extends APIBaseError {
     public statusCode = HttpStatus.BAD_REQUEST;
     public abstract generalErrorCode: GeneralErrorCodes;
+    public abstract reason: any;
 }
 
 export interface ValidationErrorItem {
@@ -43,6 +44,7 @@ export interface RevertReasonErrorBody {
 export class ValidationError extends BadRequestError {
     public generalErrorCode = GeneralErrorCodes.ValidationError;
     public validationErrors: ValidationErrorItem[];
+    public reason = generalErrorCodeToReason[GeneralErrorCodes.ValidationError];
     constructor(validationErrors: ValidationErrorItem[]) {
         super();
         this.validationErrors = validationErrors;
@@ -51,34 +53,35 @@ export class ValidationError extends BadRequestError {
 
 export class MalformedJSONError extends BadRequestError {
     public generalErrorCode = GeneralErrorCodes.MalformedJson;
+    public reason = generalErrorCodeToReason[GeneralErrorCodes.MalformedJson];
 }
 
 export class TooManyRequestsError extends BadRequestError {
     public statusCode = HttpStatus.TOO_MANY_REQUESTS;
     public generalErrorCode = GeneralErrorCodes.Throttled;
+    public reason = generalErrorCodeToReason[GeneralErrorCodes.Throttled];
 }
 
 export class NotImplementedError extends BadRequestError {
     public statusCode = HttpStatus.NOT_IMPLEMENTED;
     public generalErrorCode = GeneralErrorCodes.NotImplemented;
+    public reason = generalErrorCodeToReason[GeneralErrorCodes.NotImplemented];
 }
 
 export class InvalidAPIKeyError extends BadRequestError {
     public statusCode = HttpStatus.BAD_REQUEST;
     public generalErrorCode = GeneralErrorCodes.InvalidAPIKey;
+    public reason = generalErrorCodeToReason[GeneralErrorCodes.InvalidAPIKey];
 }
 
 export class NotFoundError extends APIBaseError {
     public statusCode = HttpStatus.NOT_FOUND;
 }
 
-export class InternalServerError extends APIBaseError {
-    public statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
-}
-
 export class RevertAPIError extends BadRequestError {
     public statusCode = HttpStatus.BAD_REQUEST;
     public generalErrorCode = GeneralErrorCodes.TransactionInvalid;
+    public reason = generalErrorCodeToReason[GeneralErrorCodes.TransactionInvalid];
     public name: string;
     public values: ObjectMap<any>;
     public isRevertError = true;
@@ -89,9 +92,28 @@ export class RevertAPIError extends BadRequestError {
     }
 }
 
+export class InternalServerError extends APIBaseError {
+    public statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
+    public reason: string;
+    constructor(message: string) {
+        super(message);
+        this.reason = message;
+    }
+}
+
+export class ClientError extends BadRequestError {
+    public generalErrorCode = GeneralErrorCodes.ValidationError;
+    public reason: string;
+    constructor(message: string) {
+        super(message);
+        this.reason = message;
+    }
+}
+
 export class InsufficientFundsError extends BadRequestError {
     public statusCode = HttpStatus.BAD_REQUEST;
     public generalErrorCode = GeneralErrorCodes.InsufficientFundsError;
+    public reason = generalErrorCodeToReason[GeneralErrorCodes.InsufficientFundsError];
 }
 
 export enum GeneralErrorCodes {

@@ -5,7 +5,7 @@ import { Connection, In } from 'typeorm';
 
 import { SRA_ORDER_EXPIRATION_BUFFER_SECONDS } from '../config';
 import { SignedOrderEntity } from '../entities';
-import { ValidationError } from '../errors';
+import { InternalServerError, ValidationError } from '../errors';
 import { alertOnExpiredOrders } from '../logger';
 import { PinResult } from '../types';
 import { MeshClient } from '../utils/mesh_client';
@@ -172,7 +172,7 @@ export class OrderBookService {
             // Order Watcher Service will handle persistence
             return;
         }
-        throw new Error('Could not add order to mesh.');
+        throw new InternalServerError('Could not add order to mesh.');
     }
     public async splitOrdersByPinningAsync(signedOrders: SignedOrder[]): Promise<PinResult> {
         return orderUtils.splitOrdersByPinningAsync(this._connection, signedOrders);

@@ -129,7 +129,17 @@ export class SwapHandlers {
         }
         const unitAmount = new BigNumber(1);
         const records = await this._swapService.getTokenPricesAsync(baseAsset, unitAmount);
-        res.status(HttpStatus.OK).send({ records });
+        if (req.query.usdEstimate === 'true') {
+            // Normalize to USD output
+            const usdResult = records.find(r => r.symbol === 'USDC');
+            const usdPrice = usdResult
+                ? usdResult.price
+                : new BigNumber(1).dividedBy(records.find(r => r.symbol === 'DAI').price);
+            const usdRecords = records.map(r => ({ ...r, price: r.price.times(new BigNumber(1).dividedBy(usdPrice)).decimalPlaces(6) }));
+            res.status(HttpStatus.OK).send({ records: usdRecords });
+        } else {
+            res.status(HttpStatus.OK).send({ records });
+        }
     }
 
     public async getMarketDepthAsync(req: express.Request, res: express.Response): Promise<void> {
