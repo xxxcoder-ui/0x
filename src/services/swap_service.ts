@@ -233,7 +233,11 @@ export class SwapService {
         return this._getSwapQuoteForWethAsync(params, true);
     }
 
-    public async getTokenPricesAsync(sellToken: TokenMetadata, unitAmount: BigNumber): Promise<GetTokenPricesResponse> {
+    public async getTokenPricesAsync(
+        sellToken: TokenMetadata,
+        unitAmount: BigNumber,
+        outputUSD: boolean,
+    ): Promise<GetTokenPricesResponse> {
         // Gets the price for buying 1 unit (not base unit as this is different between tokens with differing decimals)
         // returns price in sellToken units, e.g What is the price of 1 ZRX (in DAI)
         // Equivalent to performing multiple swap quotes selling sellToken and buying 1 whole buy token
@@ -286,7 +290,21 @@ export class SwapService {
                 };
             })
             .filter(p => p) as GetTokenPricesResponse;
-        return prices;
+        if (outputUSD) {
+            // Normalize to USD output
+            const usdResult = prices.find(r => r.symbol === 'USDC');
+            const usdPrice = usdResult
+                ? usdResult.price
+                : new BigNumber(1).dividedBy(prices.find(r => r.symbol === 'DAI').price);
+            const usdPrices = prices.map(r => ({
+                ...r,
+                // tslint:disable-next-line:custom-no-magic-numbers
+                price: r.price.times(new BigNumber(1).dividedBy(usdPrice)).decimalPlaces(6),
+            }));
+            return usdPrices;
+        } else {
+            return prices;
+        }
     }
 
     public async calculateMarketDepthAsync(
