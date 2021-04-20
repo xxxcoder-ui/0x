@@ -88,14 +88,15 @@ export class RfqmService {
         //
         // And sort by best price
         const now = new BigNumber(Date.now());
+        // tslint:disable-next-line: custom-no-magic-numbers
+        const inThreeMinutes = now.plus(ONE_MINUTE_MS * 3).div(1000);
         const sortedQuotes = indicativeQuotes
             .filter((q) => q.takerToken === takerToken && q.makerToken === makerToken)
             .filter((q) => {
                 const requestedAmount = isSelling ? q.takerAmount : q.makerAmount;
                 return requestedAmount.gte(assetFillAmount);
             })
-            // tslint:disable-next-line: custom-no-magic-numbers
-            .filter((q) => q.expiry.gte(now.plus(ONE_MINUTE_MS * 3)))
+            .filter((q) => q.expiry.gte(inThreeMinutes))
             .sort((a, b) => {
                 // Want the most amount of maker tokens for each taker token
                 const aPrice = a.makerAmount.div(a.takerAmount);
