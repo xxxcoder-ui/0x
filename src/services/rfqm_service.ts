@@ -595,16 +595,6 @@ export class RfqmService {
         const shouldProceed = await this._quoteServerClient.confirmLastLookAsync(makerUri!, submitRequest);
         logger.info({ makerUri, shouldProceed, orderHash }, 'Got last look response from market maker');
 
-        if (!shouldProceed) {
-            RFQM_JOB_MM_REJECTED_LAST_LOOK.labels(makerUri!).inc();
-            // Terminate with an error transition
-            await this._dbUtils.updateRfqmJobAsync(orderHash, {
-                status: RfqmJobStatus.Failed,
-                statusReason: 'Rejected by MM last look',
-            });
-            return;
-        }
-
         // submit to chain
         let submissionsMap: SubmissionsMap;
         try {
