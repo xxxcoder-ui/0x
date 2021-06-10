@@ -662,12 +662,14 @@ export class RfqmService {
         let isTxMined = false;
         let isTxFinalized = false;
         while (!isTxFinalized) {
+            logger.info('checking submissions status');
             await delay(TRANSACTION_WATCHER_SLEEP_TIME_MS);
 
             const statusCheckResult = await this._checkSubmissionMapReceiptsAndUpdateDbAsync(
                 submissionsMap,
                 expectedTakerTokenFillAmount,
             );
+            logger.info({ statusCheckResult }, 'submissions status retrieved');
             isTxMined = statusCheckResult.isTxMined;
             isTxFinalized = statusCheckResult.isTxFinalized;
             submissionsMap = statusCheckResult.submissionsMap;
@@ -717,6 +719,14 @@ export class RfqmService {
             if (receipt.response !== undefined) {
                 isTxMined = true;
                 const currentBlock = await this._blockchainUtils.getCurrentBlockAsync();
+                logger.info(
+                    {
+                        receipt,
+                        currentBlock,
+                    },
+                    'checking this receipt for mined status and finality',
+                );
+
                 if (receipt.response.blockNumber - currentBlock >= BLOCK_FINALITY_THRESHOLD) {
                     isTxFinalized = true;
                 }
