@@ -140,11 +140,6 @@ const RFQM_JOB_FAILED_ETHCALL_VALIDATION = new Counter({
     name: 'rfqm_job_failed_ethcall_validation',
     help: 'A job failed eth_call validation before being queued',
 });
-const RFQM_JOB_MM_REJECTED_LAST_LOOK = new Counter({
-    name: 'rfqm_job_mm_rejected_last_look',
-    help: 'A job rejected by market maker on last look',
-    labelNames: ['makerUri'],
-});
 const PRICE_DECIMAL_PLACES = 6;
 
 /**
