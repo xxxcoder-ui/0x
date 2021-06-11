@@ -6,11 +6,7 @@ import 'mocha';
 import { Connection } from 'typeorm';
 
 import { getDBConnectionAsync } from '../src/db_connection';
-import {
-    RfqmJobEntity,
-    RfqmQuoteEntity,
-    RfqmTransactionSubmissionEntity,
-} from '../src/entities';
+import { RfqmJobEntity, RfqmQuoteEntity, RfqmTransactionSubmissionEntity } from '../src/entities';
 import {
     feeToStoredFee,
     RfqmDbUtils,
